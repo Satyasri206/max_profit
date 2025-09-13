@@ -1,46 +1,75 @@
-def max_profit(n, memo={}):
-    # Memoization: store answers to avoid recalculation
-    if n in memo:
-        return memo[n]
+def max_profit(n):
+    builds = [('T', 5, 1500), ('P', 4, 1000), ('C', 10, 3000)]
 
-    # If not enough time to build anything → profit 0
-    if n < 4:
-        return (0, {"T": 0, "P": 0, "C": 0})
+    best_profit = [0] * (n + 1)
+    best_seq = [set() for _ in range(n + 1)]
+    for i in range(n + 1):
+        best_seq[i].add(tuple())
 
-    best_profit = 0
-    best_choice = {"T": 0, "P": 0, "C": 0}
+    for time in range(1, n + 1):
+        for name, b, rate in builds:
+            if time >= b:
+                extra = rate * max(0, time - b)
+                profit = extra + best_profit[time - b]
+                if profit > best_profit[time]:
+                    best_profit[time] = profit
+                    best_seq[time].clear()
+                if profit == best_profit[time]:
+                    for seq in best_seq[time - b]:
+                        new_seq = (name,) + seq
+                        best_seq[time].add(new_seq)
 
-    # Option 1: Build Theatre (takes 5 time units)
-    if n >= 5:
-        profit_after, choice_after = max_profit(n - 5, memo)
-        profit = 1500 * (n - 5) + profit_after
-        if profit > best_profit:
-            best_profit = profit
-            best_choice = choice_after.copy()
-            best_choice["T"] += 1
+    final_counts = set()
+    for seq in best_seq[n]:
+        times = []
+        time_used = 0
+        for ch in seq:
+            if ch == 'T':
+                time_used += 5
+            elif ch == 'P':
+                time_used += 4
+            else:
+                time_used += 10
+            times.append(time_used)
+        while times and times[-1] == n:
+            times.pop()
+            seq = seq[:-1]
+        time_used = 0
+        earnings = 0
+        for ch in seq:
+            if ch == 'T':
+                time_used += 5
+                earnings += max(0, n - time_used) * 1500
+            elif ch == 'P':
+                time_used += 4
+                earnings += max(0, n - time_used) * 1000
+            else:
+                time_used += 10
+                earnings += max(0, n - time_used) * 3000
+        if earnings == best_profit[n]:
+            t = seq.count('T')
+            p = seq.count('P')
+            c = seq.count('C')
+            final_counts.add((t, p, c))
 
-    # Option 2: Build Pub (takes 4 time units)
-    if n >= 4:
-        profit_after, choice_after = max_profit(n - 4, memo)
-        profit = 1000 * (n - 4) + profit_after
-        if profit > best_profit:
-            best_profit = profit
-            best_choice = choice_after.copy()
-            best_choice["P"] += 1
+    return best_profit[n], final_counts
 
-    # Option 3: Build Commercial Park (takes 10 time units)
-    if n >= 10:
-        profit_after, choice_after = max_profit(n - 10, memo)
-        profit = 3000 * (n - 10) + profit_after
-        if profit > best_profit:
-            best_profit = profit
-            best_choice = choice_after.copy()
-            best_choice["C"] += 1
 
-    memo[n] = (best_profit, best_choice)
-    return memo[n]
+if __name__ == "__main__":
+    try:
+        n = int(input("Enter total units of time: ").strip())
+        if n < 0:
+            print("Time must be non-negative")
+            raise SystemExit
+    except:
+        print("Invalid input")
+        raise SystemExit
 
-#  Test with examples from the PDF
-for t in [7, 8, 13]:
-    profit, choice = max_profit(t, {})
-    print(f"Time = {t}, Profit = ${profit}, Choice = {choice}")
+    profit, choices = max_profit(n)
+    print(f"\nmaxEarnings: {profit}")
+    if not choices:
+        print("No valid builds possible.")
+    else:
+        print(f"{len(choices)} possibilities:")
+        for t, p, c in sorted(list(choices), key=lambda x: (-x[0], x[1], x[2])):
+            print(f"T: {t}, P: {p}, C: {c}")
